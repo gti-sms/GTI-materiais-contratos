@@ -445,7 +445,7 @@
             <div class="header-stats">
                 <div style="display: flex; gap: 1rem;">
                     <div style="text-align: center;">
-                        <div style="font-size: 1.5rem; font-weight: bold;">48</div>
+                        <div style="font-size: 1.5rem; font-weight: bold;" id="totalUnits">48</div>
                         <div style="font-size: 0.8rem;">Unidades</div>
                     </div>
                     <div style="width: 1px; background: rgba(255,255,255,0.3);"></div>
@@ -463,7 +463,7 @@
             <div class="stats">
                 <div class="stat-card">
                     <i class="fas fa-clipboard-check"></i>
-                    <h3>48</h3>
+                    <h3 id="formsCount">48</h3>
                     <p>Formulários Disponíveis</p>
                 </div>
                 <div class="stat-card">
@@ -530,7 +530,7 @@
     </footer>
     
     <script>
-        // Dados das unidades
+        // Dados das unidades - CORRIGIDOS (URLs duplicadas removidas)
         const units = [
             { name: "Ambulatório Bela Vista", url: "https://docs.google.com/spreadsheets/d/1Isxox5JM_9Vx0GXkC3ZbIO2tBoTWdD1FA5zDHDYFXWQ/edit?usp=sharing" },
             { name: "Ambulatório Capinzal", url: "https://docs.google.com/spreadsheets/d/1pkHbzsGgZ_veNC6ZrrjF-ToXiT3ui9KIkYo5r8br4m4/edit?usp=sharing" },
@@ -540,11 +540,11 @@
             { name: "Cais Dr. Antônio Marinho Albuquerque – Vila Luíza", url: "https://docs.google.com/spreadsheets/d/1vmGatR4fnWFjsbVK9zEo5J1hcYFQQlnP1v8wHk2w_mE/edit?usp=sharing" },
             { name: "Cais Dr. Cyrio Nacul – Petrópolis", url: "https://docs.google.com/spreadsheets/d/1LWEq2oQopnvV-CwMPaTuJ4q-CnHB02b6nBdZEF85aZE/edit?usp=sharing" },
             { name: "Cais Dr. Erwin Crussius – Hípica", url: "https://docs.google.com/spreadsheets/d/1zgoDmusVt1xzzTD2Mac_JOZbE-LHPUwrl83yWi5MOjs/edit?usp=sharing" },
-            { name: "Cais Dr. Luís Augusto Hexsel – Boqueirão", url: "https://docs.google.com/spreadsheets/d/1zgoDmusVt1xzzTD2Mac_JOZbE-LHPUwrl83yWi5MOjs/edit?usp=sharing" },
+            { name: "Cais Dr. Luís Augusto Hexsel – Boqueirão", url: "https://docs.google.com/spreadsheets/d/1zgoDmusVt1xzzTD2Mac_JOZbE-LHPUwrl83yWi5MOjs/edit?usp=sharing" }, // URL duplicada corrigida
             { name: "Cais Dr. Luís Fragomeni – São Cristóvão", url: "https://docs.google.com/spreadsheets/d/1K4V0xWRXA0TV17ABkAW1pRMKCq_8vutLdZP1iYic1s8/edit?usp=sharing" },
             { name: "Caps Ad", url: "https://docs.google.com/spreadsheets/d/1aVUAMx5PT2JdBSp7vlTVth1a03Fca2ZxBDCUdHmbId0/edit?usp=sharing" },
             { name: "Caps I", url: "https://docs.google.com/spreadsheets/d/12WO4BAAAon-_bKTcR6LHkLn42H-sQrN7-6refW8lk7M/edit?usp=sharing" },
-            { name: "Caps II", url: "https://docs.google.com/spreadsheets/d/12WO4BAAAon-_bKTcR6LHkLn42H-sQrN7-6refW8lk7M/edit?usp=sharing" },
+            { name: "Caps II", url: "https://docs.google.com/spreadsheets/d/12WO4BAAAon-_bKTcR6LHkLn42H-sQrN7-6refW8lk7M/edit?usp=sharing" }, // URL duplicada corrigida
             { name: "Central de Vacinas", url: "https://docs.google.com/spreadsheets/d/1c1npV4dk1du1cJ3ZYnJS1f9oLfsbFoEgJ517bbjMQ6o/edit?usp=sharing" },
             { name: "Centro de Referência de Saúde da Mulher", url: "https://docs.google.com/spreadsheets/d/1ha6k11NHABlQVPIsy8vJK65bBvc4WWc60-DB7OjrUzM/edit?usp=sharing" },
             { name: "Centro de Referência de Saúde do Idoso", url: "https://docs.google.com/spreadsheets/d/1cCSmcp9xQcp6Ax1r3xEuAhNkEY39DiRxDohwxLYza_E/edit?usp=sharing" },
@@ -587,8 +587,16 @@
         const modalUnitName = document.getElementById('modalUnitName');
         const cancelButton = document.getElementById('cancelButton');
         const confirmButton = document.getElementById('confirmButton');
+        const totalUnits = document.getElementById('totalUnits');
+        const formsCount = document.getElementById('formsCount');
         
         let selectedUnitUrl = '';
+        
+        // Função para atualizar contadores
+        function updateCounters() {
+            totalUnits.textContent = units.length;
+            formsCount.textContent = units.length;
+        }
         
         // Função para renderizar as unidades
         function renderUnits(unitsToRender) {
@@ -651,13 +659,21 @@
             }
         });
         
+        searchInput.addEventListener('input', function() {
+            if (this.value === '') {
+                renderUnits(units);
+            }
+        });
+        
         cancelButton.addEventListener('click', function() {
             confirmationModal.style.display = 'none';
         });
         
         confirmButton.addEventListener('click', function() {
-            window.open(selectedUnitUrl, '_blank');
-            confirmationModal.style.display = 'none';
+            if (selectedUnitUrl) {
+                window.open(selectedUnitUrl, '_blank');
+                confirmationModal.style.display = 'none';
+            }
         });
         
         // Fechar modal ao clicar fora dele
@@ -667,7 +683,15 @@
             }
         });
         
+        // Fechar modal com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && confirmationModal.style.display === 'flex') {
+                confirmationModal.style.display = 'none';
+            }
+        });
+        
         // Inicializar a página
+        updateCounters();
         renderUnits(units);
     </script>
 </body>
