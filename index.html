@@ -203,6 +203,9 @@
             border-left: 4px solid var(--primary);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 140px; /* Altura fixa para padronizar */
         }
         
         .unit-card:hover {
@@ -226,12 +229,22 @@
             color: var(--primary);
             font-size: 1.1rem;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 0.5rem;
+            flex: 1;
+            line-height: 1.4;
         }
         
         .unit-name i {
             color: var(--accent);
+            margin-top: 0.2rem;
+            flex-shrink: 0;
+        }
+        
+        .unit-link-container {
+            margin-top: auto; /* Empurra o botão para baixo */
+            display: flex;
+            justify-content: flex-start;
         }
         
         .unit-link {
@@ -245,8 +258,8 @@
             border-radius: 6px;
             font-weight: 500;
             transition: var(--transition);
-            margin-top: 0.5rem;
             font-size: 0.9rem;
+            width: auto;
         }
         
         .unit-link:hover {
@@ -412,6 +425,11 @@
                 grid-template-columns: 1fr;
             }
             
+            .unit-card {
+                height: auto;
+                min-height: 140px;
+            }
+            
             .search-box {
                 flex-direction: column;
             }
@@ -519,12 +537,9 @@
             <p>Secretaria Municipal de Saúde - Sistema de Controle de Materiais de Limpeza</p>
             <p>© 2025 - Todos os direitos reservados</p>
             <div class="footer-links">
-                <a href="#"><i class="fas fa-question-circle"></i> Ajuda</a>
                 <a href="https://wa.me/555499771610?text=Olá!%20Preciso%20de%20suporte%20técnico%20para%20o%20Sistema%20de%20Controle%20de%20Materiais%20de%20Limpeza%20da%20SMS" class="whatsapp-link">
-                    <i class="fab fa-whatsapp"></i> Suporte GTI - 
-                </a>
-                <a href="#"><i class="fas fa-shield-alt"></i> Privacidade</a>
-                <a href="#"><i class="fas fa-file-alt"></i> Termos de Uso</a>
+                    <i class="fab fa-whatsapp"></i> Suporte GTI </a>
+
             </div>
         </div>
     </footer>
@@ -540,11 +555,11 @@
             { name: "Cais Dr. Antônio Marinho Albuquerque – Vila Luíza", url: "https://docs.google.com/spreadsheets/d/1vmGatR4fnWFjsbVK9zEo5J1hcYFQQlnP1v8wHk2w_mE/edit?usp=sharing" },
             { name: "Cais Dr. Cyrio Nacul – Petrópolis", url: "https://docs.google.com/spreadsheets/d/1LWEq2oQopnvV-CwMPaTuJ4q-CnHB02b6nBdZEF85aZE/edit?usp=sharing" },
             { name: "Cais Dr. Erwin Crussius – Hípica", url: "https://docs.google.com/spreadsheets/d/1zgoDmusVt1xzzTD2Mac_JOZbE-LHPUwrl83yWi5MOjs/edit?usp=sharing" },
-            { name: "Cais Dr. Luís Augusto Hexsel – Boqueirão", url: "https://docs.google.com/spreadsheets/d/1zgoDmusVt1xzzTD2Mac_JOZbE-LHPUwrl83yWi5MOjs/edit?usp=sharing" }, // URL duplicada corrigida
+            { name: "Cais Dr. Luís Augusto Hexsel – Boqueirão", url: "https://docs.google.com/spreadsheets/d/1zgoDmusVt1xzzTD2Mac_JOZbE-LHPUwrl83yWi5MOjs/edit?usp=sharing" },
             { name: "Cais Dr. Luís Fragomeni – São Cristóvão", url: "https://docs.google.com/spreadsheets/d/1K4V0xWRXA0TV17ABkAW1pRMKCq_8vutLdZP1iYic1s8/edit?usp=sharing" },
             { name: "Caps Ad", url: "https://docs.google.com/spreadsheets/d/1aVUAMx5PT2JdBSp7vlTVth1a03Fca2ZxBDCUdHmbId0/edit?usp=sharing" },
             { name: "Caps I", url: "https://docs.google.com/spreadsheets/d/12WO4BAAAon-_bKTcR6LHkLn42H-sQrN7-6refW8lk7M/edit?usp=sharing" },
-            { name: "Caps II", url: "https://docs.google.com/spreadsheets/d/12WO4BAAAon-_bKTcR6LHkLn42H-sQrN7-6refW8lk7M/edit?usp=sharing" }, // URL duplicada corrigida
+            { name: "Caps II", url: "https://docs.google.com/spreadsheets/d/12WO4BAAAon-_bKTcR6LHkLn42H-sQrN7-6refW8lk7M/edit?usp=sharing" },
             { name: "Central de Vacinas", url: "https://docs.google.com/spreadsheets/d/1c1npV4dk1du1cJ3ZYnJS1f9oLfsbFoEgJ517bbjMQ6o/edit?usp=sharing" },
             { name: "Centro de Referência de Saúde da Mulher", url: "https://docs.google.com/spreadsheets/d/1ha6k11NHABlQVPIsy8vJK65bBvc4WWc60-DB7OjrUzM/edit?usp=sharing" },
             { name: "Centro de Referência de Saúde do Idoso", url: "https://docs.google.com/spreadsheets/d/1cCSmcp9xQcp6Ax1r3xEuAhNkEY39DiRxDohwxLYza_E/edit?usp=sharing" },
@@ -616,9 +631,11 @@
                         <i class="fas fa-clinic-medical"></i>
                         ${unit.name}
                     </div>
-                    <a href="#" class="unit-link" data-url="${unit.url}" data-name="${unit.name}">
-                        <i class="fas fa-external-link-alt"></i> Acessar Formulário
-                    </a>
+                    <div class="unit-link-container">
+                        <a href="#" class="unit-link" data-url="${unit.url}" data-name="${unit.name}">
+                            <i class="fas fa-external-link-alt"></i> Acessar Formulário
+                        </a>
+                    </div>
                 `;
                 
                 unitsGrid.appendChild(unitCard);
