@@ -1,805 +1,1358 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Materiais de Limpeza - SMS</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Telefonia - Secretaria Municipal de Saúde PMPF</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
     <style>
-        /* Variáveis CSS para um tema coerente */
-        :root {
-            --primary: #1a5276;
-            --primary-dark: #13405c;
-            --primary-light: #2e86c1;
-            --secondary: #28a745;
-            --accent: #17a2b8;
-            --light: #f8f9fa;
-            --dark: #343a40;
-            --gray: #6c757d;
-            --light-gray: #e9ecef;
-            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --transition: all 0.3s ease;
+        /* ====== VARS & RESET ====== */
+        :root{
+            --primary:#2c6aa0;--primary-dark:#1e4a73;--secondary:#4caf50;
+            --danger:#e74c3c;--warning:#f39c12;--light:#f8f9fa;
+            --dark:#343a40;--gray:#6c757d;--border:#dee2e6;
+            --shadow:0 4px 12px rgba(0,0,0,.1);--transition:all .3s ease;
+            --radius:12px;--radius-sm:8px;
+        }
+        *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Tahoma,Arial,sans-serif}
+        html,body{width:100%;height:100%;background:#f5f7fa;color:var(--dark);line-height:1.6;overflow-x:hidden}
+        
+        /* Container & Layout */
+        .container{max-width:1400px;margin:0 auto;padding:0 20px;width:100%}
+        
+        /* Header Improvements */
+        header{
+            background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+            color:#fff;padding:15px 0;box-shadow:var(--shadow);
+            position:sticky;top:0;z-index:1000;backdrop-filter:blur(10px);
+        }
+        .header-content{display:flex;justify-content:space-between;align-items:center;width:100%}
+        .logo{display:flex;align-items:center;gap:15px}
+        .logo i{font-size:2.2rem;filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}
+        .logo h1{font-size:1.8rem;font-weight:700;letter-spacing:-0.5px}
+        .header-actions{display:flex;gap:12px;align-items:center}
+        .theme-toggle,.admin-toggle{
+            background:rgba(255,255,255,.25);border:0;color:#fff;
+            width:44px;height:44px;border-radius:50%;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+            transition:var(--transition);backdrop-filter:blur(10px);
+        }
+        .theme-toggle:hover,.admin-toggle:hover{
+            background:rgba(255,255,255,.4);transform:scale(1.05);
         }
         
-        /* Reset/Normalize Básico */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        /* Modal Improvements */
+        .login-modal{
+            display:none;position:fixed;inset:0;
+            background:rgba(0,0,0,.6);z-index:2000;
+            align-items:center;justify-content:center;backdrop-filter:blur(5px);
+        }
+        .login-modal.active{display:flex}
+        .login-form{
+            background:#fff;padding:35px;border-radius:var(--radius);
+            box-shadow:0 20px 40px rgba(0,0,0,.3);width:100%;
+            max-width:420px;transform:translateY(-20px);animation:slideUp .3s ease forwards;
+        }
+        @keyframes slideUp{to{transform:translateY(0)}}
+        .login-form h2{margin-bottom:25px;color:var(--primary-dark);text-align:center;font-weight:600}
+        
+        /* Form Improvements */
+        .form-group{margin-bottom:20px}
+        .form-group label{display:block;margin-bottom:8px;font-weight:600;color:var(--dark)}
+        .form-control{
+            width:100%;padding:12px 16px;border:2px solid var(--border);
+            border-radius:var(--radius-sm);font-size:1rem;transition:var(--transition);
+            background:#fff;
+        }
+        .form-control:focus{
+            outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(44,106,160,.15);
+            transform:translateY(-1px);
+        }
+        .btn{
+            padding:12px 24px;border:0;border-radius:var(--radius-sm);cursor:pointer;
+            font-weight:600;transition:var(--transition);display:flex;
+            align-items:center;gap:10px;font-size:0.95rem;
+        }
+        .btn-primary{background:var(--primary);color:#fff}
+        .btn-primary:hover{background:var(--primary-dark);transform:translateY(-2px);box-shadow:0 4px 12px rgba(44,106,160,.3)}
+        .btn-secondary{background:var(--gray);color:#fff}
+        .btn-success{background:var(--secondary);color:#fff}
+        .btn-success:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(76,175,80,.3)}
+        .btn-danger{background:var(--danger);color:#fff}
+        .btn-warning{background:var(--warning);color:#fff}
+        
+        /* Admin Panel Improvements */
+        .admin-panel{
+            display:none;background:#fff;border-radius:var(--radius);
+            padding:30px;margin:30px 0;box-shadow:var(--shadow);width:100%;
+            border:1px solid rgba(0,0,0,.05);
+        }
+        .admin-panel.active{display:block;animation:fadeIn .3s ease}
+        @keyframes fadeIn{from{opacity:0} to{opacity:1}}
+        .admin-header{
+            display:flex;justify-content:space-between;align-items:center;
+            margin-bottom:25px;padding-bottom:20px;
+            border-bottom:3px solid var(--primary);
+        }
+        .admin-title{font-size:1.6rem;font-weight:700;color:var(--primary-dark)}
+        .admin-tabs{
+            display:flex;gap:5px;margin-bottom:25px;border-bottom:2px solid var(--border);
+            background:#f8f9fa;padding:5px;border-radius:var(--radius-sm);
+        }
+        .admin-tab{
+            padding:12px 24px;cursor:pointer;border-radius:var(--radius-sm);
+            transition:var(--transition);font-weight:500;flex:1;text-align:center;
+        }
+        .admin-tab.active{background:var(--primary);color:#fff;box-shadow:var(--shadow)}
+        .admin-content{display:none}
+        .admin-content.active{display:block;animation:slideIn .3s ease}
+        @keyframes slideIn{from{transform:translateX(10px);opacity:0} to{transform:translateX(0);opacity:1}}
+        .form-grid{
+            display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+            gap:25px;margin-bottom:25px;
+        }
+        .form-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:30px}
+        .units-list{display:flex;flex-direction:column;gap:15px;max-height:500px;overflow-y:auto;padding:5px}
+        .unit-item{
+            background:var(--light);border-radius:var(--radius-sm);padding:20px;
+            border-left:5px solid var(--primary);display:flex;
+            justify-content:space-between;align-items:center;transition:var(--transition);
+        }
+        .unit-item:hover{transform:translateX(5px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+        .unit-actions{display:flex;gap:10px}
+        
+        /* Search & Cards Improvements */
+        .search-container{
+            background:#fff;border-radius:var(--radius);padding:30px;
+            margin:30px 0;box-shadow:var(--shadow);width:100%;
+            border:1px solid rgba(0,0,0,.05);
+        }
+        .search-box{display:flex;gap:12px;margin-bottom:25px;width:100%}
+        .search-input{
+            flex:1;padding:16px 20px;border:2px solid var(--border);
+            border-radius:var(--radius-sm);font-size:1rem;transition:var(--transition);
+            background:#fff;
+        }
+        .search-input:focus{
+            border-color:var(--primary);box-shadow:0 0 0 3px rgba(44,106,160,.15);
+            transform:translateY(-1px);
+        }
+        .search-btn{
+            background:var(--primary);color:#fff;border:0;
+            border-radius:var(--radius-sm);padding:0 30px;cursor:pointer;
+            transition:var(--transition);font-weight:600;font-size:1rem;
+        }
+        .search-btn:hover{background:var(--primary-dark);transform:translateY(-2px);box-shadow:0 4px 12px rgba(44,106,160,.3)}
+        .filter-options{display:flex;gap:12px;flex-wrap:wrap;width:100%}
+        .filter-btn{
+            background:#fff;border:2px solid var(--border);border-radius:25px;
+            padding:10px 20px;cursor:pointer;display:flex;align-items:center;
+            gap:8px;transition:var(--transition);font-weight:500;font-size:0.9rem;
+        }
+        .filter-btn.active{
+            background:var(--primary);color:#fff;border-color:var(--primary);
+            transform:translateY(-2px);box-shadow:0 4px 12px rgba(44,106,160,.2);
+        }
+        .filter-btn:hover:not(.active){border-color:var(--primary);transform:translateY(-1px)}
+        .service-filters{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;width:100%}
+        
+        /* Service Toggle Buttons */
+        .service-toggle-btn{
+            background:#fff;border:2px solid var(--border);border-radius:25px;
+            padding:12px 20px;cursor:pointer;display:flex;align-items:center;
+            gap:10px;transition:var(--transition);font-size:0.9rem;color:var(--gray);
+            font-weight:500;
+        }
+        .service-toggle-btn.active{
+            background:var(--primary);color:#fff;border-color:var(--primary);
+            transform:translateY(-2px);box-shadow:0 4px 12px rgba(44,106,160,.2);
+        }
+        .service-toggle-btn:hover:not(.active){border-color:var(--primary);transform:translateY(-1px)}
+        .service-toggle-btn i{font-size:1rem}
+        
+        /* Tabs & Content */
+        .tabs{
+            display:flex;border-bottom:2px solid var(--border);margin-bottom:25px;
+            flex-wrap:wrap;background:#f8f9fa;padding:5px;border-radius:var(--radius-sm);
+        }
+        .tab{
+            padding:14px 28px;cursor:pointer;border-radius:var(--radius-sm);
+            transition:var(--transition);font-weight:600;flex:1;text-align:center;
+        }
+        .tab.active{background:var(--primary);color:#fff;box-shadow:var(--shadow)}
+        .content{display:none;width:100%}
+        .content.active{display:block;animation:fadeIn .4s ease}
+        .results-count{
+            margin-bottom:20px;color:var(--gray);font-size:.95rem;width:100%;
+            padding:12px 0;font-weight:500;
         }
         
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
-            color: var(--dark);
-            line-height: 1.6;
-            min-height: 100vh;
-            text-rendering: optimizeLegibility; /* Melhoria de visualização de texto */
+        /* Contact Cards Improvements */
+        .contact-grid{
+            display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
+            gap:25px;width:100%;
+        }
+        .contact-card{
+            background:#fff;border-radius:var(--radius);padding:25px;
+            box-shadow:var(--shadow);transition:var(--transition);
+            border-left:5px solid var(--primary);display:flex;flex-direction:column;
+            min-height:420px;position:relative;border:1px solid rgba(0,0,0,.05);
+        }
+        .contact-card:hover{
+            transform:translateY(-5px);box-shadow:0 12px 24px rgba(0,0,0,.15);
+        }
+        .favorite-btn{
+            position:absolute;top:20px;right:20px;background:none;border:0;
+            font-size:1.4rem;color:var(--gray);cursor:pointer;z-index:10;
+            transition:var(--transition);
+        }
+        .favorite-btn:hover{transform:scale(1.2)}
+        .favorite-btn.active{color:var(--warning)}
+        .contact-header{
+            display:flex;justify-content:space-between;align-items:flex-start;
+            margin-bottom:20px;width:100%;
+        }
+        .contact-name{font-size:1.3rem;font-weight:700;color:var(--primary-dark);line-height:1.3}
+        .contact-type{
+            background:rgba(44,106,160,.1);color:var(--primary);padding:6px 14px;
+            border-radius:20px;font-size:.85rem;font-weight:600;
+        }
+        .contact-info{
+            display:flex;flex-direction:column;gap:14px;width:100%;flex-grow:1;
+        }
+        .contact-item{
+            display:flex;align-items:flex-start;gap:12px;width:100%;
+            padding:8px 0;
+        }
+        .contact-item i{width:20px;color:var(--primary);margin-top:2px;font-size:1.1rem}
+        .contact-services{
+            display:flex;justify-content:space-between;margin-top:20px;
+            padding-top:20px;border-top:2px solid var(--border);width:100%;
+        }
+        .service{
+            display:flex;flex-direction:column;align-items:center;text-align:center;
+            transition:var(--transition);
+        }
+        .service i{font-size:1.4rem;margin-bottom:.4rem;transition:var(--transition)}
+        .service.available{color:var(--secondary)}
+        .service.available i{transform:scale(1.1)}
+        .service.unavailable{color:var(--gray);opacity:.6}
+        .service-label{font-size:.75rem;margin-top:.3rem;font-weight:600}
+        .contact-actions{
+            display:flex;gap:12px;margin-top:20px;width:100%;
+        }
+        .action-btn{
+            flex:1;padding:12px;border:0;border-radius:var(--radius-sm);
+            cursor:pointer;font-weight:600;display:flex;align-items:center;
+            justify-content:center;gap:8px;transition:var(--transition);
+            font-size:0.9rem;
+        }
+        .action-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+        .call-btn{background:var(--secondary);color:#fff}
+        .whatsapp-btn{background:#25D366;color:#fff}
+        .location-btn{background:transparent;border:2px solid var(--border);color:var(--gray)}
+        .location-btn:hover{background:var(--border);color:var(--dark)}
+        
+        .no-results{
+            text-align:center;padding:50px;color:var(--gray);width:100%;
+            background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
+        }
+        .no-results i{font-size:3rem;margin-bottom:20px;color:var(--primary);opacity:.5}
+        
+        /* Footer */
+        .footer{
+            background:var(--dark);color:#fff;text-align:center;padding:25px 0;
+            position:fixed;bottom:0;left:0;width:100%;z-index:100;
+            backdrop-filter:blur(10px);background:rgba(52,58,64,.95);
         }
         
-        h1, h2, h3, h4, h5, h6 {
-            margin-top: 0;
-            margin-bottom: 0.5rem;
-            line-height: 1.2;
+        /* Dark Mode */
+        body.dark-mode{
+            background:#1a1d23;color:#e9ecef;
+        }
+        body.dark-mode .search-container,
+        body.dark-mode .contact-card,
+        body.dark-mode .filter-btn,
+        body.dark-mode .service-toggle-btn,
+        body.dark-mode .admin-panel,
+        body.dark-mode .unit-item,
+        body.dark-mode .login-form{
+            background:#2d3239;color:#e9ecef;border-color:#3d434b;
+        }
+        body.dark-mode .search-input,
+        body.dark-mode .filter-btn,
+        body.dark-mode .service-toggle-btn,
+        body.dark-mode .form-control{
+            background:#343a40;border-color:#495057;color:#e9ecef;
+        }
+        body.dark-mode .search-input:focus,
+        body.dark-mode .form-control:focus{
+            border-color:var(--primary);box-shadow:0 0 0 3px rgba(44,106,160,.3);
+        }
+        body.dark-mode .service-toggle-btn{
+            background:#343a40;border-color:#495057;color:#e9ecef;
+        }
+        body.dark-mode .service-toggle-btn.active{
+            background:var(--primary);color:#fff;border-color:var(--primary);
+        }
+        body.dark-mode .service-toggle-btn:hover:not(.active){
+            border-color:var(--primary);
         }
         
-        a {
-            text-decoration: none;
-            color: var(--primary);
-            transition: var(--transition);
+        /* CLASSES PARA LÓGICA CONDICIONAL */
+        .hidden {
+            display: none !important;
         }
         
-        a:hover {
-            color: var(--primary-dark);
-        }
-
-        /* Estrutura e Header */
-        header {
-            background: linear-gradient(to right, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 1.5rem 2rem;
-            box-shadow: var(--shadow);
-            position: relative;
-            overflow: hidden;
+        /* Enhanced Responsive Design */
+        @media (max-width:1200px){
+            .contact-grid{grid-template-columns:repeat(auto-fill,minmax(350px,1fr))}
+            .form-grid{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
         }
         
-        .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            max-width: 1200px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
+        @media (max-width:992px){
+            .contact-grid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+            .admin-tabs,.tabs{flex-wrap:wrap}
+            .admin-tab,.tab{flex:1 1 calc(50% - 10px);min-width:140px}
         }
         
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+        @media (max-width:768px){
+            .header-content{flex-direction:column;gap:15px;text-align:center}
+            .contact-grid,.ramais-container{grid-template-columns:1fr}
+            .search-box{flex-direction:column}
+            .filter-options,.service-filters{justify-content:center}
+            .tabs{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap}
+            .form-grid{grid-template-columns:1fr}
+            .unit-item{flex-direction:column;align-items:flex-start;gap:15px}
+            .unit-actions{width:100%;justify-content:flex-end}
+            .admin-tabs,.tabs{padding:3px}
+            .admin-tab,.tab{padding:10px 16px;font-size:0.9rem}
+            .contact-card{min-height:380px;padding:20px}
+            .contact-actions{flex-direction:column}
+            .action-btn{width:100%}
+            .form-actions{flex-direction:column}
+            .btn{width:100%;justify-content:center}
         }
         
-        .logo {
-            font-size: 2.5rem;
-            color: white;
+        @media (max-width:480px){
+            .logo h1{font-size:1.5rem}
+            .logo i{font-size:1.8rem}
+            .tab{padding:10px 12px;font-size:.85rem}
+            .service-toggle-btn{padding:10px 15px;font-size:0.8rem;gap:6px}
+            .filter-btn{padding:8px 15px;font-size:0.8rem}
+            .search-input{padding:14px 16px}
+            .contact-grid{gap:15px}
+            .container{padding:0 15px}
+            .search-container,.admin-panel{padding:20px}
+            .contact-card{padding:18px;min-height:360px}
+            .contact-name{font-size:1.2rem}
+            .contact-item{gap:10px;padding:6px 0}
+            .contact-services{margin-top:15px;padding-top:15px}
         }
         
-        .header-text h1 {
-            font-size: clamp(1.5rem, 4vw, 1.8rem); /* Responsividade do título */
-            margin-bottom: 0.25rem;
-            font-weight: 600;
+        @media (max-width:360px){
+            .contact-grid{grid-template-columns:1fr}
+            .admin-tab,.tab{flex:1 1 100%;min-width:100%}
+            .filter-options,.service-filters{gap:8px}
+            .filter-btn,.service-toggle-btn{padding:8px 12px;font-size:0.75rem}
         }
         
-        .header-text p {
-            opacity: 0.9;
-            font-size: clamp(0.8rem, 2vw, 1rem);
-        }
-
-        /* Decoração do Header */
-        .header-decoration {
-            position: absolute;
-            top: -20px;
-            right: -20px;
-            width: 150px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
             border-radius: 50%;
-            z-index: 1;
-            filter: blur(2px); /* Efeito suave */
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         
-        .header-decoration::after {
-            content: '';
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            width: 90px;
-            height: 90px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
+        /* Smooth Scrolling */
+        html {
+            scroll-behavior: smooth;
         }
         
-        .header-stats > div {
-            display: flex; 
-            gap: 1rem;
-            padding: 0.5rem 1rem;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-        }
-
-        .header-stats div[style*="font-size: 1.5rem"] {
-            font-size: clamp(1.2rem, 3vw, 1.5rem) !important;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
-        /* Dashboard e Cards de Estatísticas */
-        .dashboard {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); /* Sombra mais suave */
-            padding: 2.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .stat-card {
-            background: var(--light);
-            border-radius: 10px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: var(--transition);
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-        
-        .stat-card i {
-            font-size: 2.5rem;
-            color: var(--primary-light);
-            margin-bottom: 0.75rem;
-        }
-        
-        .stat-card h3 {
-            font-size: 1.6rem;
-            margin-bottom: 0.25rem;
+        /* Selection Color */
+        ::selection {
+            background: rgba(44,106,160,.2);
             color: var(--primary-dark);
-        }
-        
-        .stat-card p {
-            color: var(--gray);
-            font-size: 0.95rem;
-        }
-        
-        /* Caixa de Pesquisa */
-        .search-box {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        
-        .search-box input {
-            flex: 1;
-            padding: 0.8rem 1.2rem;
-            border: 1px solid var(--light-gray);
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: var(--transition);
-        }
-        
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(26, 82, 118, 0.15);
-        }
-        
-        .search-box button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.8rem 1.8rem;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .search-box button:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-        
-        /* Grid de Unidades */
-        .units-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Aumento na largura mínima do card */
-            gap: 1.5rem;
-        }
-        
-        .unit-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            padding: 1.5rem;
-            transition: var(--transition);
-            border-left: 5px solid var(--primary); /* Borda mais destacada */
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 180px; /* Altura fixa ligeiramente maior */
-        }
-        
-        .unit-card:hover {
-            transform: translateY(-7px) scale(1.01);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
-        }
-        
-        .unit-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 5px;
-            background: linear-gradient(to right, var(--primary-light), var(--accent));
-            opacity: 0.6;
-        }
-        
-        .unit-name {
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--primary-dark);
-            font-size: 1.2rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            flex: 1;
-            line-height: 1.4;
-            min-height: 70px; 
-        }
-        
-        .unit-name i {
-            color: var(--accent);
-            margin-top: 0.2rem;
-            flex-shrink: 0;
-            font-size: 1.5rem;
-        }
-        
-        .unit-link-container {
-            margin-top: auto;
-            display: flex;
-            justify-content: flex-start;
-            padding-top: 1.2rem;
-            border-top: 1px solid var(--light-gray);
-        }
-        
-        .unit-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: var(--primary);
-            color: white;
-            text-decoration: none;
-            padding: 0.8rem 1.8rem;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: var(--transition);
-            font-size: 1rem;
-            width: auto;
-            min-width: 180px;
-            justify-content: center;
-        }
-        
-        .unit-link:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-
-        /* Modal de Confirmação */
-        .confirmation-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(8px);
-        }
-        
-        .modal-content {
-            background-color: white;
-            padding: 3rem;
-            border-radius: 15px;
-            max-width: 550px;
-            width: 90%;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-            text-align: center;
-            position: relative;
-            animation: modalAppear 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Efeito bouncy */
-        }
-        
-        @keyframes modalAppear {
-            0% { opacity: 0; transform: scale(0.8) translateY(-50px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        
-        .modal-icon {
-            font-size: 3.5rem;
-            color: var(--accent);
-            margin-bottom: 1.5rem;
-        }
-        
-        .modal-content h2 {
-            margin-bottom: 1rem;
-            color: var(--primary);
-            font-size: 1.8rem;
-        }
-        
-        .modal-content p {
-            margin-bottom: 1.5rem;
-            color: var(--gray);
-            font-size: 1rem;
-        }
-        
-        .modal-content strong {
-            display: block;
-            font-size: 1.2rem;
-            color: var(--primary-dark);
-            margin: 0.5rem 0;
-            padding: 0.5rem;
-            background: var(--light-gray);
-            border-radius: 6px;
-        }
-        
-        .modal-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-        
-        .btn {
-            padding: 0.8rem 2rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            min-width: 150px;
-            justify-content: center;
-        }
-        
-        .btn-confirm {
-            background: var(--secondary);
-            color: white;
-        }
-        
-        .btn-confirm:hover {
-            background: #218838;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 10px rgba(40, 167, 69, 0.3);
-        }
-        
-        .btn-cancel {
-            background: var(--light-gray);
-            color: var(--dark);
-        }
-        
-        .btn-cancel:hover {
-            background: #d6d8db;
-            transform: translateY(-3px);
-            box-shadow: 0 3px 6px rgba(108, 117, 125, 0.2);
-        }
-        
-        /* Rodapé */
-        footer {
-            text-align: center;
-            padding: 2.5rem 2rem;
-            margin-top: 3rem;
-            color: var(--gray);
-            border-top: 1px solid var(--light-gray);
-            font-size: 0.95rem;
-        }
-        
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        
-        .whatsapp-link {
-            background: #25D366;
-            color: white !important;
-            padding: 0.6rem 1.5rem;
-            border-radius: 30px;
-            font-weight: 700;
-            font-size: 1rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 8px rgba(37, 211, 102, 0.4);
-        }
-        
-        .whatsapp-link:hover {
-            background: #128C7E;
-            text-decoration: none !important;
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.25);
-        }
-
-        /* Responsividade (Multiplas Telas) */
-        @media (max-width: 992px) {
-            .units-grid {
-                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                text-align: center;
-                gap: 1.5rem;
-            }
-            
-            .header-stats > div {
-                justify-content: center;
-                width: 100%;
-            }
-
-            .container {
-                padding: 1rem;
-            }
-
-            .dashboard {
-                padding: 1.5rem;
-            }
-            
-            .units-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .unit-card {
-                height: auto;
-                min-height: 180px;
-            }
-            
-            .unit-name {
-                min-height: auto;
-            }
-            
-            .search-box {
-                flex-direction: column;
-            }
-            
-            .stats {
-                grid-template-columns: 1fr;
-            }
-            
-            .modal-buttons {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-                min-width: 0;
-            }
-
-            footer {
-                padding: 1.5rem 1rem;
-            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="header-decoration"></div>
-        <div class="header-content">
-            <div class="logo-container">
-                <i class="fas fa-hand-holding-medical logo"></i>
-                <div class="header-text">
-                    <h1>Secretaria Municipal de Saúde - SMS</h1>
-                    <p>Controle de Materiais de Limpeza - Unidades de Saúde</p>
+    <!-- LOGIN MODAL -->
+    <div class="login-modal" id="loginModal" aria-hidden="true">
+        <div class="login-form" role="dialog" aria-labelledby="loginTitle">
+            <h2 id="loginTitle"><i class="fas fa-lock"></i> Acesso Administrativo</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Usuário:</label>
+                    <input type="text" id="loginUsername" class="form-control" required autocomplete="username">
                 </div>
-            </div>
-            <div class="header-stats">
-                <div>
-                    <div style="text-align: center;">
-                        <div style="font-size: 1.5rem; font-weight: bold;" id="totalUnits">55</div>
-                        <div style="font-size: 0.8rem;">Unidades</div>
-                    </div>
-                    <div style="width: 1px; background: rgba(255,255,255,0.3);"></div>
-                    <div style="text-align: center;">
-                        <div style="font-size: 1.5rem; font-weight: bold;">100%</div>
-                        <div style="font-size: 0.8rem;">Ativas</div>
-                    </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha:</label>
+                    <input type="password" id="loginPassword" class="form-control" required autocomplete="current-password">
                 </div>
-            </div>
+                <div class="form-actions" style="justify-content:center;">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+                </div>
+            </form>
         </div>
-    </header>
-    
-    <div class="container">
-        <div class="dashboard">
-            <h2><i class="fas fa-tachometer-alt"></i> Dashboard de Acesso Rápido</h2>
-            <hr style="border: 0; border-top: 1px solid var(--light-gray); margin: 1.5rem 0;">
+    </div>
 
-            <div class="stats">
-                <div class="stat-card">
-                    <i class="fas fa-clipboard-check"></i>
-                    <h3 id="formsCount">55</h3>
-                    <p>Formulários Disponíveis</p>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-sync-alt"></i>
-                    <h3>Atualizado</h3>
-                    <p>Dados em Tempo Real</p>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-shield-alt"></i>
-                    <h3>Seguro</h3>
-                    <p>Acesso Controlado</p>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-headset"></i>
-                    <h3>Suporte</h3>
-                    <p>Assistência Técnica GTI</p>
+    <div id="telefonia-container">
+        <header>
+            <div class="container">
+                <div class="header-content">
+                    <div class="logo">
+                        <i class="fas fa-phone-alt"></i>
+                        <div>
+                            <h1>Telefonia - SMS</h1>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="admin-toggle" id="adminToggle" title="Painel Administrativo"><i class="fas fa-cogs"></i></button>
+                        <button class="theme-toggle" id="themeToggle" title="Alternar tema"><i class="fas fa-moon"></i></button>
+                    </div>
                 </div>
             </div>
-            
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Digite o nome da unidade para filtrar..." aria-label="Filtrar Unidades">
-                <button id="searchButton">
-                    <i class="fas fa-search"></i> Buscar
-                </button>
-            </div>
-            
-            <div class="units-grid" id="unitsGrid">
+        </header>
+
+        <!-- ADMIN PANEL -->
+        <div class="admin-panel" id="adminPanel" aria-hidden="true">
+            <div class="container">
+                <div class="admin-header">
+                    <h2 class="admin-title">Painel Administrativo</h2>
+                    <div>
+                        <button class="btn btn-secondary" id="closeAdmin"><i class="fas fa-times"></i> Fechar</button>
+                        <button class="btn btn-danger" id="logoutBtn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Sair</button>
+                    </div>
                 </div>
+
+                <div class="admin-tabs" role="tablist">
+                    <div class="admin-tab active" data-tab="units" role="tab">Gerenciar Unidades</div>
+                    <div class="admin-tab" data-tab="add" role="tab">Adicionar Unidade</div>
+                    <div class="admin-tab" data-tab="config" role="tab">Configurações</div>
+                </div>
+
+                <!-- UNITS -->
+                <div class="admin-content active" id="units-content">
+                    <h3>Unidades Cadastradas</h3>
+                    <div class="units-list" id="unitsList"></div>
+                </div>
+
+                <!-- ADD / EDIT UNIT -->
+                <div class="admin-content" id="add-content">
+                    <h3 id="formTitle">Adicionar Nova Unidade</h3>
+                    <form id="unitForm">
+                        <div class="form-grid">
+                            <div class="form-group"><label for="unitName">Nome da Unidade *</label><input type="text" id="unitName" class="form-control" required></div>
+                            <div class="form-group"><label for="unitType">Tipo *</label>
+                                <select id="unitType" class="form-control" required>
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="promocao">Promoção</option>
+                                    <option value="recuperacao">Recuperação</option>
+                                    <option value="administrativo">Administrativo</option>
+                                    <option value="vigilancia">Vigilância</option>
+                                    <option value="capne">Capne</option>
+                                    <option value="outros">Outros</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label for="unitAddress">Endereço *</label><input type="text" id="unitAddress" class="form-control" required placeholder="Ex: Rua Exemplo, 123"><small class="form-text">O link do Google Maps será gerado automaticamente</small></div>
+                            <div class="form-group"><label for="unitBairro">Bairro *</label><input type="text" id="unitBairro" class="form-control" required placeholder="Ex: Centro"></div>
+                            <div class="form-group"><label for="unitPhone">Telefone *</label><input type="text" id="unitPhone" class="form-control" required placeholder="Ex: 3314-1234"><small class="form-text">O link do WhatsApp será gerado automaticamente</small></div>
+                            <div class="form-group"><label for="unitEmail">E-mail</label><input type="email" id="unitEmail" class="form-control" placeholder="exemplo@pmpf.rs.gov.br"></div>
+                            
+                            <!-- Campo Responsável (será exibido condicionalmente) -->
+                            <div class="form-group hidden" id="responsibleFieldContainer">
+                                <label for="unitResponsavel">Responsável *</label>
+                                <input type="text" id="unitResponsavel" class="form-control" placeholder="Nome do responsável pela unidade">
+                            </div>
+                            
+                            <div class="form-group" id="enfermeiroField"><label for="unitEnfermeiro">Enfermeiro Responsável</label><input type="text" id="unitEnfermeiro" class="form-control" placeholder="Nome do enfermeiro responsável"></div>
+                            <div class="form-group" id="gerenteField"><label for="unitGerente">Gerente Responsável</label><input type="text" id="unitGerente" class="form-control" placeholder="Nome do gerente responsável"></div>
+                            <div class="form-group" id="vacinaField"><label for="unitVacina">Sala de Vacina</label><select id="unitVacina" class="form-control"><option value="Não">Não</option><option value="Sim">Sim</option></select></div>
+                            <div class="form-group" id="odontoField"><label for="unitOdonto">Consultório Odontológico</label><select id="unitOdonto" class="form-control"><option value="Não">Não</option><option value="Sim">Sim</option></select></div>
+                            <div class="form-group" id="farmaciaField"><label for="unitFarmacia">Farmácia</label><select id="unitFarmacia" class="form-control"><option value="Não">Não</option><option value="Sim">Sim</option></select></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="cancelEdit" style="display:none;"><i class="fas fa-times"></i> Cancelar</button>
+                            <button type="reset" class="btn btn-secondary"><i class="fas fa-eraser"></i> Limpar</button>
+                            <button type="submit" class="btn btn-success" id="submitBtn"><i class="fas fa-plus"></i> Adicionar Unidade</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- CONFIG -->
+                <div class="admin-content" id="config-content">
+                    <h3>Configurações do Sistema</h3>
+                    <div class="form-grid">
+                        <div class="form-group"><label for="backupData">Backup de Dados</label><button type="button" id="backupData" class="btn btn-primary"><i class="fas fa-download"></i> Fazer Backup</button></div>
+                        <div class="form-group"><label for="restoreData">Restaurar Dados</label><input type="file" id="restoreData" class="form-control" accept=".json"></div>
+                        <div class="form-group"><label for="clearAll">Limpar Todos os Dados</label><button type="button" id="clearAll" class="btn btn-danger"><i class="fas fa-trash"></i> Limpar Tudo</button></div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- MAIN -->
+        <main class="container" style="padding-bottom:120px;">
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nome, telefone, endereço, enfermeiro ou gerente...">
+                    <button class="search-btn" id="searchBtn"><i class="fas fa-search"></i> Buscar</button>
+                </div>
+
+                <div class="filter-options">
+                    <button class="filter-btn active" data-filter="all"><i class="fas fa-th-large"></i> Todos</button>
+                    <button class="filter-btn" data-filter="promocao"><i class="fas fa-heart"></i> Promoção</button>
+                    <button class="filter-btn" data-filter="recuperacao"><i class="fas fa-stethoscope"></i> Recuperação</button>
+                    <button class="filter-btn" data-filter="administrativo"><i class="fas fa-users"></i> Administrativo</button>
+                    <button class="filter-btn" data-filter="vigilancia"><i class="fas fa-shield-alt"></i> Vigilância</button>
+                    <button class="filter-btn" data-filter="capne"><i class="fas fa-baby"></i> Capne</button>
+                    <button class="filter-btn" data-filter="outros"><i class="fas fa-map-marker-alt"></i> Outros</button>
+                </div>
+
+                <div class="service-filters">
+                    <!-- Botão Toggle para Sala de Vacina -->
+                    <button class="service-toggle-btn" data-service="vaccine" data-value="">
+                        <i class="fas fa-syringe"></i>Com sala de vacina
+                    </button>
+                    
+                    <!-- Botão Toggle para Consultório Odontológico -->
+                    <button class="service-toggle-btn" data-service="dental" data-value="">
+                        <i class="fas fa-tooth"></i>Com consultório odontológico
+                    </button>
+                    
+                    <!-- Botão Toggle para Farmácia -->
+                    <button class="service-toggle-btn" data-service="pharmacy" data-value="">
+                        <i class="fas fa-pills"></i>Com farmácia
+                    </button>
+                </div>
+            </div>
+
+            <div class="tabs" role="tablist">
+                <div class="tab active" data-tab="all" role="tab">Todos os Contatos</div>
+                <div class="tab" data-tab="favorites" role="tab">Favoritos</div>
+            </div>
+
+            <div class="content active" id="all-content">
+                <div class="results-count" id="all-count">Mostrando todos os contatos</div>
+                <div class="contact-grid" id="all-contacts"></div>
+            </div>
+
+            <div class="content" id="favorites-content">
+                <div class="results-count" id="favorites-count">Seus contatos favoritos</div>
+                <div class="contact-grid" id="favorites-contacts"></div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container footer-content">
+                <p>Secretaria Municipal de Saúde - Prefeitura de Passo Fundo</p>
+            </div>
+        </footer>
     </div>
-    
-    <div class="confirmation-modal" id="confirmationModal" role="dialog" aria-modal="true" aria-labelledby="modalUnitName">
-        <div class="modal-content">
-            <i class="fas fa-clipboard-list modal-icon"></i>
-            <h2>Confirmação de Acesso</h2>
-            <p>Você está prestes a acessar o formulário de materiais de limpeza para a unidade:</p>
-            <p><strong id="modalUnitName"></strong></p>
-            <p>Acesso para o gerente realizar o preenchimento - **E-mail da sua Unidade**</p>
-            <div class="modal-buttons">
-                <button class="btn btn-cancel" id="cancelButton">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                <button class="btn btn-confirm" id="confirmButton">
-                    <i class="fas fa-external-link-alt"></i> Acessar Formulário
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <footer>
-        <div class="footer-content">
-            <p>Secretaria Municipal de Saúde - Sistema de Controle de Materiais de Limpeza</p>
-            <p>© 2025 - Todos os direitos reservados</p>
-            <div class="footer-links" style="margin-top: 0.5rem;">
-                <a href="https://wa.me/555499771610?text=Olá!%20Preciso%20de%20suporte%20técnico%20para%20o%20Sistema%20de%20Controle%20de%20Materiais%20de%20Limpeza%20da%20SMS" class="whatsapp-link">
-                    GTI - Assistência TI
-                    <i class="fab fa-whatsapp" style="margin-left: 0.25rem;"></i>
-                </a>
-            </div>
-        </div>
-    </footer>
-    
+
     <script>
-        // Dados das unidades atualizados e completos
-        const units = [
-            { name: "Ambulatório Bela Vista", url: "https://docs.google.com/spreadsheets/d/1Isxox5JM_9Vx0GXkC3ZbIO2tBoTWdD1FA5zDHDYFXWQ/edit?usp=sharing" },
-            { name: "Ambulatório Capinzal", url: "https://docs.google.com/spreadsheets/d/1pkHbzsGgZ_veNC6ZrrjF-ToXiT3ui9KIkYo5r8br4m4/edit?usp=sharing" },
-            { name: "Ambulatório Especialidades", url: "https://docs.google.com/spreadsheets/d/1Gi62kirWVRvUf93TEvyMXO1D36cdZ-Fj-kr1NMnp4eQ/edit?usp=sharing" },
-            { name: "Ambulatório Pulador", url: "https://docs.google.com/spreadsheets/d/1paw1nwQFb-MfOOmUydA3d3EIrS8XZWKjfjBiEWoGwIs/edit?usp=sharing" },
-            { name: "Ambulatório São Valentin/São Roque", url: "https://docs.google.com/spreadsheets/d/1pBd0NII9lkCs4AjEgBetLw-eVLc9Rz3ZEQLhi-E1NgY/edit?usp=sharing" },
-            { name: "Cais Dr. Antônio Marinho Albuquerque – Vila Luíza", url: "https://docs.google.com/spreadsheets/d/1vmGatR4fnWFjsbVK9zEo5J1hcYFQQlnP1v8wHk2w_mE/edit?usp=sharing" },
-            { name: "Cais Dr. Cyrio Nacul – Petrópolis", url: "https://docs.google.com/spreadsheets/d/1LWEq2oQopnvV-CwMPaTuJ4q-CnHB02b6nBdZEF85aZE/edit?usp=sharing" },
-            { name: "Cais Dr. Erwin Crussius – Hípica", url: "https://docs.google.com/spreadsheets/d/1zgoDmusVt1xzzTD2Mac_JOZbE-LHPUwrl83yWi5MOjs/edit?usp=sharing" },
-            { name: "Cais Dr. Luís Augusto Hexsel – Boqueirão", url: "https://docs.google.com/spreadsheets/d/1XLSr5SiMKjceB_wP0Uun_YtmiQNLGsuf0nihPSMT7as/edit?usp=sharing" },
-            { name: "Cais Dr. Luís Fragomeni – São Cristóvão", url: "https://docs.google.com/spreadsheets/d/1K4V0xWRXA0TV17ABkAW1pRMKCq_8vutLdZP1iYic1s8/edit?usp=sharing" },
-            { name: "Caps Ad", url: "https://docs.google.com/spreadsheets/d/1aVUAMx5PT2JdBSp7vlTVth1a03Fca2ZxBDCUdHmbId0/edit?usp=sharing" },
-            { name: "Caps I", url: "https://docs.google.com/spreadsheets/d/12WO4BAAAon-_bKTcR6LHkLn42H-sQrN7-6refW8lk7M/edit?usp=sharing" },
-            { name: "Caps II", url: "https://docs.google.com/spreadsheets/d/122G_lqFXUhpjcUUahUi9tqVI61XbUNzrB9nfbXLeP4w/edit?usp=sharing" },
-            { name: "Central de Vacinas", url: "https://docs.google.com/spreadsheets/d/1c1npV4dk1du1cJ3ZYnJS1f9oLfsbFoEgJ517bbjMQ6o/edit?usp=sharing" },
-            { name: "Centro de Referência de Saúde da Mulher", url: "https://docs.google.com/spreadsheets/d/1ha6k11NHABlQVPIsy8vJK65bBvc4WWc60-DB7OjrUzM/edit?usp=sharing" },
-            { name: "Centro de Referência de Saúde do Idoso", url: "https://docs.google.com/spreadsheets/d/1cCSmcp9xQcp6Ax1r3xEuAhNkEY39DiRxDohwxLYza_E/edit?usp=sharing" },
-            { name: "Capne", url: "https://docs.google.com/spreadsheets/d/160Q72HacnruMRiJIKZg3qJwT-D8w7mb5NbadYbtYu3A/edit?usp=sharing" },
-            { name: "Coordenadoria de Vigilância em Saúde", url: "https://docs.google.com/spreadsheets/d/1N0m5qMOtYr_Rw6gHV57Jj2uz37GjjnZyVZf6VBbleM0/edit?usp=sharing" },
-            { name: "ESF 1º Centenário", url: "https://docs.google.com/spreadsheets/d/1DOue-0t2_2PapvEYAwwu7SGo2BCMAcgDtcAt2BaymUc/edit?usp=sharing" },
-            { name: "ESF Adirbal Corralo", url: "https://docs.google.com/spreadsheets/d/1B-X93vNUYnhJP2-cwWLpJLkBxL-HrCzOE_0Gn_aUGik/edit?usp=sharing" },
-            { name: "ESF Adolfo Groth", url: "https://docs.google.com/spreadsheets/d/18iF9CErM8EfPEA6Or6N8f5CPs2TejSLtf1IMfKgArds/edit?usp=sharing" },
-            { name: "ESF Adriana Lirio – Operária", url: "https://docs.google.com/spreadsheets/d/14pN1vwHWoc_HFY3MpcwWq-_u4ccFDBa4EnrqHsRA0G8/edit?usp=sharing" },
-            { name: "ESF Edu Villa de Azambuja (Caic)", url: "https://docs.google.com/spreadsheets/d/1pxbyMDEA0RwwIQR8-erBfrvE_JMHFF6scnP6vAFrwsg/edit?usp=sharing" },
-            { name: "ESF Jaboticabal", url: "https://docs.google.com/spreadsheets/d/1iPrOdXGlOFQmdKGMZgxB-gxrSkIFbR4twp8L9i2mjyY/edit?usp=sharing" },
-            { name: "ESF Jerônimo Coelho", url: "https://docs.google.com/spreadsheets/d/1papQ1EzyA7864xdkMrl2BTAd8G7LOaKmQ1jghqih4yM/edit?usp=sharing" },
-            { name: "ESF Planaltina", url: "https://docs.google.com/spreadsheets/d/1Gg-RP403UQSCuQcoerdxId1U04syTb5QjNoKc3gBasQ/edit?usp=sharing" },
-            { name: "ESF Ricci", url: "https://docs.google.com/spreadsheets/d/1U4X1DX1T3zxiEkxYCGiRAR3jPTiJLCJBTPHvr43De-M/edit?usp=sharing" },
-            { name: "ESF Santa Marta / ESF Donária", url: "https://docs.google.com/spreadsheets/d/1g7jnkYWwpUVoq0xK9zDK5j8yJOy422FpjgAaP_sOmMM/edit?usp=sharing" },
-            { name: "ESF São Cristóvão", url: "https://docs.google.com/spreadsheets/d/1ZJsQXxMmJm9Pu5b8oko-n22oFcGu-mhw7FNiAvJl4WM/edit?usp=sharing" },
-            { name: "ESF São Luiz Gonzaga", url: "https://docs.google.com/spreadsheets/d/12jfjhw8rLdvbjjXmaLA7F8Zmsm831Y63-T9we4SkOgI/edit?usp=sharing" },
-            { name: "Farmácia Central", url: "https://docs.google.com/spreadsheets/d/1BbGbyRoCM9p8wdNcN5JSb5M07PrTfpP-RLy1Dy6NAps/edit?usp=sharing" },
-            { name: "SAMU", url: "https://docs.google.com/spreadsheets/d/1_HZj4YfbqVo8JaQwo5NX4IWcRtQYg00EwEy89kXn8kM/edit?usp=sharing" },
-            { name: "Secretaria Municipal De Saúde", url: "https://docs.google.com/spreadsheets/d/1tO1i-BPC6OoGZWLFup-me4aFeyeXI7bDdTqcOUX7XYM/edit?usp=sharing" },
-            { name: "Serviço de Atendimento Especializado – SAE", url: "https://docs.google.com/spreadsheets/d/1nNQN5mdBCRb8VMy_Hr56ZeDd1wl8ezXuMqefSVNon1w/edit?usp=sharing" },
-            { name: "UBS Annes", url: "https://docs.google.com/spreadsheets/d/1Ky8frymYfZqsdmdzMY1cEpNMYQhElTeum-x3ZPsFkeY/edit?usp=sharing" },
-            { name: "UBS Bom Recreio", url: "https://docs.google.com/spreadsheets/d/1e7zz5sghpbdQM_on2R2aLYwoKj8F52B1seSlLLTRUSw/edit?usp=sharing" },
-            { name: "UBS Entre Rios", url: "https://docs.google.com/spreadsheets/d/1Fkw7OunZw2HigxtH16soT115hw8JkhU1J_TxhcUC5oA/edit?usp=sharing" },
-            { name: "UBS Independente", url: "https://docs.google.com/spreadsheets/d/1z25XuIqkKYbrJO1Lf2TU1SNr68UbakRU_Z3Zsw84Qhg/edit?usp=sharing" },
-            { name: "UBS Ivo Ferreira", url: "https://docs.google.com/spreadsheets/d/1gKaJUFDy3mVQNiPNeq3BUzUKPaiVcZKo5H49-RvV8zY/edit?usp=sharing" },
-            { name: "UBS Nossa Senhora Aparecida", url: "https://docs.google.com/spreadsheets/d/15oZdBErm5wMdZHaenmUxl6YZ-ExgHH6rqKrcZe07W1Q/edit?usp=sharing" },
-            { name: "UBS Parque Farroupilha", url: "https://docs.google.com/spreadsheets/d/1X1IUnCGgXk8NmLkK7Sh5o3bQQTF7vpepOhkJGGAmU9A/edit?usp=sharing" },
-            { name: "UBS Petrópolis", url: "https://docs.google.com/spreadsheets/d/16ipxtGe9rZbWlawfjTkBxxD0pPPog8QyW6ZjO9TbyoA/edit?usp=sharing" },
-            { name: "UBS Santa Rita", url: "https://docs.google.com/spreadsheets/d/1INRxMpgcLhueL_uBwd4cEqCTc47u2AuiNc8SK_Cv-8I/edit?usp=sharing" },
-            { name: "UBS Santo Antônio Da Pedreira", url: "https://docs.google.com/spreadsheets/d/1cRDWNIaRSVbBquafLatYmW4SS_r9RWJr2yZoYhz8nyU/edit?usp=sharing" },
-            { name: "UBS Vila Nova", url: "https://docs.google.com/spreadsheets/d/1P2tVpszvSF9AFOGiA5o6C_GpipsCjxrF3-_JCVllVYs/edit?usp=sharing" },
-            // Novas unidades adicionadas
-            { name: "Ambulatório Sede Independência", url: "https://docs.google.com/spreadsheets/d/1_GEap2FAeBHQ8xUdvT9jgIUxZ17F39oPO3wW5KzZrMI/edit?usp=sharing" },
-            { name: "ESF Hípica", url: "https://docs.google.com/spreadsheets/d/1jnTQoMFaTEJ8EdcCAX-9fDXzaoC4H_cOl0AOqW-tc5c/edit?usp=sharing" },
-            { name: "ESF Mattos", url: "https://docs.google.com/spreadsheets/d/1h4Av83a5f4mhmoYVqNlZkhl9q9b3Dona-QUIO9hLkm0/edit?usp=sharing" },
-            { name: "ESF Nene Graef", url: "https://docs.google.com/spreadsheets/d/1YhDEAUX-8ZD4v3yCNhnBSAkVfNn7n7Ar-tb6q1lvhAU/edit?usp=sharing" },
-            { name: "ESF São José", url: "https://docs.google.com/spreadsheets/d/1ObAwOfK754qQKmT0LNdhz3pnh06euKvrGIBFAMvzZgA/edit?usp=sharing" },
-            { name: "ESF Valinhos", url: "https://docs.google.com/spreadsheets/d/1LJkBrUIIihZJnn14n2VtiL0xlQGidLVMHUPMesb_ZqI/edit?usp=sharing" },
-            { name: "ESF Zachia / UBS Zachia", url: "https://docs.google.com/spreadsheets/d/1H2OEFl6FsQ2sgvP9DuaNk9w1TfnMUtgZvN-6uTEMfRI/edit?usp=sharing" },
-            { name: "UBS Jardim América", url: "https://docs.google.com/spreadsheets/d/19tdWZUq3pIxt4TTIZSH8jZ4Cry5ZPE3kiPUN_YaDBfQ/edit?usp=sharing" },
-            { name: "UBS Menino Deus", url: "https://docs.google.com/spreadsheets/d/15T3qNQ9S02h4ov2xUlpd-J45svtlALqnA8MzuMHyyKc/edit?usp=sharing" },
-            { name: "UBS Nonoai", url: "https://docs.google.com/spreadsheets/d/1ArPT3T8AATE77iurSAm0eSwCE3zR0yWGdYyVQqnF2W4/edit?usp=sharing" },
-            { name: "UBS Prisional", url: "https://docs.google.com/spreadsheets/d/19YrMgTy4BelmEJUjH815byBCbg6UGl1WfdGPd2ka6e8/edit?usp=sharing" }
-        ];
+    /***********************************************
+     * Firebase Configuration & Initialization
+     ***********************************************/
+    // Configuração do Firebase - COM SUAS CONFIGURAÇÕES REAIS
+    const firebaseConfig = {
+        apiKey: "AIzaSyBAWIDL__uXduaupNcv_9vdnPrD9rZLao4",
+        authDomain: "telefonia-sms-pmpf.firebaseapp.com",
+        projectId: "telefonia-sms-pmpf",
+        storageBucket: "telefonia-sms-pmpf.firebasestorage.app",
+        messagingSenderId: "949540838663",
+        appId: "1:949540838663:web:a911bac3a3057eda09b9a2",
+        measurementId: "G-ESLY0RBEF8"
+    };
 
-        // Elementos DOM
-        const unitsGrid = document.getElementById('unitsGrid');
-        const searchInput = document.getElementById('searchInput');
-        const searchButton = document.getElementById('searchButton');
-        const confirmationModal = document.getElementById('confirmationModal');
-        const modalUnitName = document.getElementById('modalUnitName');
-        const cancelButton = document.getElementById('cancelButton');
-        const confirmButton = document.getElementById('confirmButton');
-        const totalUnits = document.getElementById('totalUnits');
-        const formsCount = document.getElementById('formsCount');
-        
-        let selectedUnitUrl = '';
-        
-        // Função para atualizar contadores
-        function updateCounters() {
-            totalUnits.textContent = units.length;
-            formsCount.textContent = units.length;
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    /***********************************************
+     * Firebase Database Services
+     ***********************************************/
+    const DataService = {
+        // Obter todas as unidades do Firestore
+        async getUnits() {
+            try {
+                const snapshot = await db.collection('unidades').get();
+                const units = [];
+                snapshot.forEach(doc => {
+                    units.push({ id: doc.id, ...doc.data() });
+                });
+                return units;
+            } catch (error) {
+                console.error('Erro ao buscar unidades:', error);
+                return [];
+            }
+        },
+
+        // Salvar unidade (criar ou atualizar)
+        async saveUnit(unit) {
+            try {
+                if (unit.id) {
+                    // Atualizar unidade existente
+                    const { id, ...unitData } = unit;
+                    await db.collection('unidades').doc(id).update(unitData);
+                    return unit;
+                } else {
+                    // Criar nova unidade
+                    const docRef = await db.collection('unidades').add(unit);
+                    return { id: docRef.id, ...unit };
+                }
+            } catch (error) {
+                console.error('Erro ao salvar unidade:', error);
+                throw error;
+            }
+        },
+
+        // Excluir unidade
+        async deleteUnit(id) {
+            try {
+                await db.collection('unidades').doc(id).delete();
+            } catch (error) {
+                console.error('Erro ao excluir unidade:', error);
+                throw error;
+            }
+        },
+
+        // Escutar mudanças em tempo real
+        subscribeToUnits(callback) {
+            return db.collection('unidades').onSnapshot(snapshot => {
+                const units = [];
+                snapshot.forEach(doc => {
+                    units.push({ id: doc.id, ...doc.data() });
+                });
+                callback(units);
+            }, error => {
+                console.error('Erro ao escutar mudanças:', error);
+            });
         }
+    };
+
+    /***********************************************
+     * Authentication Service (Local)
+     ***********************************************/
+    const AuthService = {
+        adminUser: 'admin',
+        adminPass: 'ZXqwas123@',
         
-        // Função para renderizar as unidades
-        function renderUnits(unitsToRender) {
-            unitsGrid.innerHTML = '';
+        async login(username, password) {
+            // Simula uma requisição assíncrona
+            await new Promise(resolve => setTimeout(resolve, 120));
             
-            if (unitsToRender.length === 0) {
-                unitsGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--gray); font-style: italic;">Nenhuma unidade encontrada com o termo pesquisado. Por favor, verifique a grafia.</p>';
+            if (username === this.adminUser && password === this.adminPass) {
+                localStorage.setItem('telefonia_isLogged', 'true');
+                return { success: true };
+            }
+            return { success: false, message: 'Usuário ou senha incorretos' };
+        },
+        
+        logout() {
+            localStorage.removeItem('telefonia_isLogged');
+        },
+        
+        isLogged() {
+            return localStorage.getItem('telefonia_isLogged') === 'true';
+        }
+    };
+
+    /***********************************************
+     * UI & Application Logic
+     ***********************************************/
+    const UI = {
+        elements: {},
+        
+        async cache() {
+            this.elements = {
+                loginModal: document.getElementById('loginModal'),
+                loginForm: document.getElementById('loginForm'),
+                loginUsername: document.getElementById('loginUsername'),
+                loginPassword: document.getElementById('loginPassword'),
+                adminPanel: document.getElementById('adminPanel'),
+                adminToggle: document.getElementById('adminToggle'),
+                closeAdmin: document.getElementById('closeAdmin'),
+                logoutBtn: document.getElementById('logoutBtn'),
+                themeToggle: document.getElementById('themeToggle'),
+                searchInput: document.getElementById('searchInput'),
+                searchBtn: document.getElementById('searchBtn'),
+                filterBtns: document.querySelectorAll('.filter-btn'),
+                tabs: document.querySelectorAll('.tab'),
+                adminTabs: document.querySelectorAll('.admin-tab'),
+                allContacts: document.getElementById('all-contacts'),
+                favoritesContacts: document.getElementById('favorites-contacts'),
+                unitsListAdmin: document.getElementById('unitsList'),
+                formUnit: document.getElementById('unitForm'),
+                submitBtn: document.getElementById('submitBtn'),
+                cancelEditBtn: document.getElementById('cancelEdit'),
+                formTitle: document.getElementById('formTitle'),
+                allCount: document.getElementById('all-count'),
+                favoritesCount: document.getElementById('favorites-count'),
+                backupBtn: document.getElementById('backupData'),
+                restoreInput: document.getElementById('restoreData'),
+                clearAllBtn: document.getElementById('clearAll'),
+                unitType: document.getElementById('unitType'),
+                responsibleField: document.getElementById('responsibleFieldContainer'),
+                enfermeiroField: document.getElementById('enfermeiroField'),
+                gerenteField: document.getElementById('gerenteField'),
+                vacinaField: document.getElementById('vacinaField'),
+                odontoField: document.getElementById('odontoField'),
+                farmaciaField: document.getElementById('farmaciaField')
+            };
+        },
+
+        setupConditionalFormLogic() {
+            const unitTypeSelect = this.elements.unitType;
+            const conditionalTypes = ['administrativo', 'vigilancia', 'capne', 'outros'];
+            
+            function checkConditionalFields() {
+                const selectedType = unitTypeSelect.value;
+                
+                if (conditionalTypes.includes(selectedType)) {
+                    UI.elements.enfermeiroField.classList.add('hidden');
+                    UI.elements.gerenteField.classList.add('hidden');
+                    UI.elements.vacinaField.classList.add('hidden');
+                    UI.elements.odontoField.classList.add('hidden');
+                    UI.elements.farmaciaField.classList.add('hidden');
+                    
+                    UI.elements.responsibleField.classList.remove('hidden');
+                    document.getElementById('unitResponsavel').required = true;
+                } else {
+                    UI.elements.enfermeiroField.classList.remove('hidden');
+                    UI.elements.gerenteField.classList.remove('hidden');
+                    UI.elements.vacinaField.classList.remove('hidden');
+                    UI.elements.odontoField.classList.remove('hidden');
+                    UI.elements.farmaciaField.classList.remove('hidden');
+                    
+                    UI.elements.responsibleField.classList.add('hidden');
+                    document.getElementById('unitResponsavel').required = false;
+                }
+            }
+            
+            unitTypeSelect.addEventListener('change', checkConditionalFields);
+            checkConditionalFields();
+        },
+
+        getTypeLabel(type) {
+            const map = { 
+                'promocao': 'Promoção',
+                'recuperacao': 'Recuperação',
+                'administrativo': 'Administrativo',
+                'vigilancia': 'Vigilância',
+                'capne': 'Capne',
+                'outros': 'Outros' 
+            };
+            return map[type] || type;
+        },
+
+        shouldShowServices(type) {
+            const conditionalTypes = ['administrativo', 'vigilancia', 'capne', 'outros'];
+            return !conditionalTypes.includes(type);
+        },
+
+        renderContacts(contacts, container) {
+            const root = container === 'all' ? this.elements.allContacts : this.elements.favoritesContacts;
+            root.innerHTML = '';
+            
+            if (!contacts || contacts.length === 0) {
+                root.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-search"></i>
+                        <h3>Nenhum contato encontrado</h3>
+                        <p>Tente ajustar seus filtros ou termos de busca</p>
+                    </div>
+                `;
                 return;
             }
             
-            unitsToRender.forEach(unit => {
-                const unitCard = document.createElement('div');
-                unitCard.className = 'unit-card';
+            contacts.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'contact-card';
                 
-                unitCard.innerHTML = `
-                    <div class="unit-name">
-                        <i class="fas fa-clinic-medical" aria-hidden="true"></i>
-                        <span>${unit.name}</span>
+                const phoneClean = c.phone.replace(/\D/g, '');
+                const telLink = `tel:+55${phoneClean}`;
+                const whatsappLink = `https://wa.me/55${phoneClean}`;
+                const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address + ', ' + c.bairro + ', Passo Fundo, RS')}`;
+                
+                const showServices = this.shouldShowServices(c.type);
+                
+                card.innerHTML = `
+                    <button class="favorite-btn ${c.favorite ? 'active' : ''}" data-id="${c.id}" title="Favoritar">
+                        <i class="fas fa-star"></i>
+                    </button>
+                    <div class="contact-header">
+                        <div>
+                            <h3 class="contact-name">${c.name}</h3>
+                            <span class="contact-type">${this.getTypeLabel(c.type)}</span>
+                        </div>
                     </div>
-                    <div class="unit-link-container">
-                        <a href="#" class="unit-link" data-url="${unit.url}" data-name="${unit.name}" role="button">
-                            <i class="fas fa-external-link-alt" aria-hidden="true"></i> Acessar Formulário
-                        </a>
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>${c.address}, ${c.bairro}</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <span>${c.phone}</span>
+                        </div>
+                        ${c.email ? `
+                        <div class="contact-item">
+                            <i class="fas fa-envelope"></i>
+                            <span>${c.email}</span>
+                        </div>` : ''}
+                        ${c.enfermeiro ? `
+                        <div class="contact-item">
+                            <i class="fas fa-user-nurse"></i>
+                            <span>Enf. ${c.enfermeiro}</span>
+                        </div>` : ''}
+                        ${c.gerente ? `
+                        <div class="contact-item">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Gerente: ${c.gerente}</span>
+                        </div>` : ''}
+                        ${c.responsavel ? `
+                        <div class="contact-item">
+                            <i class="fas fa-user"></i>
+                            <span>Responsável: ${c.responsavel}</span>
+                        </div>` : ''}
+                    </div>
+                    ${showServices ? `
+                    <div class="contact-services">
+                        <div class="service ${c.vacina === 'Sim' ? 'available' : 'unavailable'}">
+                            <i class="fas fa-syringe"></i>
+                            <span class="service-label">Vacina</span>
+                        </div>
+                        <div class="service ${c.odonto === 'Sim' ? 'available' : 'unavailable'}">
+                            <i class="fas fa-tooth"></i>
+                            <span class="service-label">Odonto</span>
+                        </div>
+                        <div class="service ${c.farmacia === 'Sim' ? 'available' : 'unavailable'}">
+                            <i class="fas fa-pills"></i>
+                            <span class="service-label">Farmácia</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div class="contact-actions">
+                        <button class="action-btn call-btn" onclick="window.open('${telLink}', '_self')">
+                            <i class="fas fa-phone"></i> Ligar
+                        </button>
+                        <button class="action-btn whatsapp-btn" onclick="window.open('${whatsappLink}', '_blank')">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </button>
+                        <button class="action-btn location-btn" onclick="window.open('${mapsLink}', '_blank')">
+                            <i class="fas fa-map"></i> Localização
+                        </button>
                     </div>
                 `;
+                root.appendChild(card);
+            });
+            
+            this.attachContactListeners();
+        },
+
+        attachContactListeners() {
+            document.querySelectorAll('.favorite-btn').forEach(btn => {
+                btn.onclick = async (e) => {
+                    const id = btn.getAttribute('data-id');
+                    await App.toggleFavorite(id);
+                };
+            });
+        },
+
+        renderUnitsList(units) {
+            this.elements.unitsListAdmin.innerHTML = '';
+            
+            units.forEach(u => {
+                const item = document.createElement('div');
+                item.className = 'unit-item';
+                item.innerHTML = `
+                    <div class="unit-info">
+                        <h4>${u.name}</h4>
+                        <p>${this.getTypeLabel(u.type)} - ${u.phone}</p>
+                    </div>
+                    <div class="unit-actions">
+                        <button class="btn btn-warning edit-unit" data-id="${u.id}">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn btn-danger delete-unit" data-id="${u.id}">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                `;
+                this.elements.unitsListAdmin.appendChild(item);
+            });
+            
+            document.querySelectorAll('.edit-unit').forEach(btn => {
+                btn.onclick = () => App.editUnit(btn.dataset.id);
+            });
+            
+            document.querySelectorAll('.delete-unit').forEach(btn => {
+                btn.onclick = () => App.deleteUnit(btn.dataset.id);
+            });
+        },
+
+        showLogin() {
+            this.elements.loginModal.classList.add('active');
+            this.elements.loginModal.setAttribute('aria-hidden', 'false');
+            this.elements.loginUsername.focus();
+        },
+        
+        hideLogin() {
+            this.elements.loginModal.classList.remove('active');
+            this.elements.loginModal.setAttribute('aria-hidden', 'true');
+            this.elements.loginForm.reset();
+        },
+
+        openAdmin() {
+            this.elements.adminPanel.classList.add('active');
+            this.elements.adminPanel.setAttribute('aria-hidden', 'false');
+            this.elements.logoutBtn.style.display = 'inline-flex';
+        },
+        
+        closeAdmin() {
+            this.elements.adminPanel.classList.remove('active');
+            this.elements.adminPanel.setAttribute('aria-hidden', 'true');
+        },
+
+        toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const icon = this.elements.themeToggle.querySelector('i');
+            
+            if (document.body.classList.contains('dark-mode')) {
+                icon.className = 'fas fa-sun';
+                localStorage.setItem('telefonia_theme', 'dark');
+            } else {
+                icon.className = 'fas fa-moon';
+                localStorage.setItem('telefonia_theme', 'light');
+            }
+        },
+
+        loadTheme() {
+            const theme = localStorage.getItem('telefonia_theme');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-mode');
+                this.elements.themeToggle.querySelector('i').className = 'fas fa-sun';
+            }
+        },
+
+        setCounts(all, favorites) {
+            this.elements.allCount.textContent = `Mostrando ${all} contatos`;
+            this.elements.favoritesCount.textContent = `Seus contatos favoritos (${favorites})`;
+        },
+
+        bindUIActions() {
+            // Toggle do painel administrativo
+            this.elements.adminToggle.onclick = () => {
+                if (AuthService.isLogged()) {
+                    this.openAdmin();
+                } else {
+                    this.showLogin();
+                }
+            };
+            
+            this.elements.closeAdmin.onclick = () => this.closeAdmin();
+            
+            this.elements.logoutBtn.onclick = () => {
+                AuthService.logout();
+                this.elements.logoutBtn.style.display = 'none';
+                this.closeAdmin();
+                alert('Desconectado do painel administrativo');
+            };
+
+            // Login form
+            this.elements.loginForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const username = this.elements.loginUsername.value.trim();
+                const password = this.elements.loginPassword.value;
                 
-                unitsGrid.appendChild(unitCard);
+                const result = await AuthService.login(username, password);
+                
+                if (result.success) {
+                    this.hideLogin();
+                    this.openAdmin();
+                } else {
+                    alert(result.message || 'Falha no login');
+                }
+            };
+
+            // Toggle de tema
+            this.elements.themeToggle.onclick = () => this.toggleTheme();
+
+            // Busca e filtros
+            this.elements.searchBtn.onclick = () => App.performSearch();
+            this.elements.searchInput.onkeypress = (e) => {
+                if (e.key === 'Enter') App.performSearch();
+            };
+
+            this.elements.filterBtns.forEach(btn => {
+                btn.onclick = function() {
+                    UI.elements.filterBtns.forEach(x => x.classList.remove('active'));
+                    this.classList.add('active');
+                    App.filterContacts(this.dataset.filter);
+                };
+            });
+
+            // Filtros de serviços
+            document.querySelectorAll('.service-toggle-btn').forEach(btn => {
+                btn.onclick = function() {
+                    this.classList.toggle('active');
+                    const newValue = this.classList.contains('active') ? 'Sim' : '';
+                    this.setAttribute('data-value', newValue);
+                    App.filterContacts(document.querySelector('.filter-btn.active').dataset.filter);
+                };
+            });
+
+            // Tabs principais
+            this.elements.tabs.forEach(tab => {
+                tab.onclick = function() {
+                    UI.elements.tabs.forEach(x => x.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    document.getElementById(`${this.dataset.tab}-content`).classList.add('active');
+                };
+            });
+
+            // Tabs do admin
+            this.elements.adminTabs.forEach(tab => {
+                tab.onclick = function() {
+                    UI.elements.adminTabs.forEach(x => x.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.admin-content').forEach(c => c.classList.remove('active'));
+                    document.getElementById(`${this.dataset.tab}-content`).classList.add('active');
+                };
+            });
+
+            // Formulário de unidade
+            this.elements.formUnit.onsubmit = async (e) => {
+                e.preventDefault();
+                await App.saveUnitFromForm();
+            };
+            
+            this.elements.cancelEditBtn.onclick = () => {
+                this.elements.formUnit.reset();
+                this.elements.formTitle.textContent = 'Adicionar Nova Unidade';
+                this.elements.submitBtn.innerHTML = '<i class="fas fa-plus"></i> Adicionar Unidade';
+                this.elements.cancelEditBtn.style.display = 'none';
+                this.elements.formUnit.removeAttribute('data-edit-id');
+                this.setupConditionalFormLogic();
+            };
+
+            // Configurações
+            this.elements.backupBtn.onclick = () => App.backupData();
+            this.elements.restoreInput.onchange = (e) => App.restoreData(e.target.files[0]);
+            this.elements.clearAllBtn.onclick = () => App.clearAllData();
+
+            // Lógica condicional do formulário
+            this.setupConditionalFormLogic();
+        }
+    };
+
+    const App = {
+        units: [],
+        favorites: JSON.parse(localStorage.getItem('telefonia_favorites') || '[]'),
+        unsubscribe: null,
+
+        async init() {
+            await UI.cache();
+            UI.loadTheme();
+            UI.bindUIActions();
+            
+            if (AuthService.isLogged()) {
+                UI.openAdmin();
+            } else {
+                UI.elements.logoutBtn.style.display = 'none';
+            }
+            
+            // Iniciar escuta em tempo real do Firebase
+            this.startRealtimeUpdates();
+        },
+
+        startRealtimeUpdates() {
+            // Escutar mudanças em tempo real no Firestore
+            this.unsubscribe = DataService.subscribeToUnits((units) => {
+                this.units = units;
+                this.refreshUI();
+            });
+        },
+
+        refreshUI() {
+            // Atualizar favoritos
+            this.units.forEach(u => {
+                u.favorite = this.favorites.includes(u.id);
             });
             
-            // Adicionar event listeners aos links
-            document.querySelectorAll('.unit-link').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const url = this.getAttribute('data-url');
-                    const name = this.getAttribute('data-name');
-                    showConfirmationModal(name, url);
+            // Renderizar contatos
+            UI.renderContacts(this.units, 'all');
+            UI.renderContacts(this.units.filter(u => this.favorites.includes(u.id)), 'favorites');
+            UI.renderUnitsList(this.units);
+            UI.setCounts(this.units.length, this.favorites.length);
+        },
+
+        async toggleFavorite(unitId) {
+            const idx = this.favorites.indexOf(unitId);
+            
+            if (idx === -1) {
+                // Adicionar aos favoritos
+                this.favorites.push(unitId);
+            } else {
+                // Remover dos favoritos
+                this.favorites.splice(idx, 1);
+            }
+            
+            // Salvar favoritos no localStorage
+            localStorage.setItem('telefonia_favorites', JSON.stringify(this.favorites));
+            
+            // Atualizar UI
+            this.refreshUI();
+        },
+
+        async filterContacts(filter) {
+            let filtered = this.units.slice();
+            
+            // Aplicar filtro de tipo
+            if (filter && filter !== 'all') {
+                filtered = filtered.filter(u => u.type === filter);
+            }
+            
+            // Aplicar filtros de serviços
+            const vaccineBtn = document.querySelector('.service-toggle-btn[data-service="vaccine"]');
+            const dentalBtn = document.querySelector('.service-toggle-btn[data-service="dental"]');
+            const pharmacyBtn = document.querySelector('.service-toggle-btn[data-service="pharmacy"]');
+            
+            const vaccine = vaccineBtn.getAttribute('data-value');
+            const dental = dentalBtn.getAttribute('data-value');
+            const pharmacy = pharmacyBtn.getAttribute('data-value');
+            
+            if (vaccine) filtered = filtered.filter(u => u.vacina === vaccine);
+            if (dental) filtered = filtered.filter(u => u.odonto === dental);
+            if (pharmacy) filtered = filtered.filter(u => u.farmacia === pharmacy);
+            
+            // Aplicar busca por texto
+            const term = (UI.elements.searchInput.value || '').trim().toLowerCase();
+            if (term) {
+                filtered = filtered.filter(u => {
+                    return (u.name || '').toLowerCase().includes(term) ||
+                           (u.phone || '').includes(term) ||
+                           (u.address || '').toLowerCase().includes(term) ||
+                           (u.bairro || '').toLowerCase().includes(term) ||
+                           (u.enfermeiro || '').toLowerCase().includes(term) ||
+                           (u.gerente || '').toLowerCase().includes(term) ||
+                           (u.responsavel || '').toLowerCase().includes(term);
                 });
-            });
-        }
-        
-        // Função para mostrar o modal de confirmação
-        function showConfirmationModal(unitName, unitUrl) {
-            modalUnitName.textContent = unitName;
-            selectedUnitUrl = unitUrl;
-            confirmationModal.style.display = 'flex';
-        }
-        
-        // Função para filtrar unidades
-        function filterUnits() {
-            const searchTerm = searchInput.value.toLowerCase().trim();
-            const filteredUnits = units.filter(unit => 
-                unit.name.toLowerCase().includes(searchTerm)
-            );
-            renderUnits(filteredUnits);
-        }
-        
-        // Event Listeners para Busca
-        searchButton.addEventListener('click', filterUnits);
-        searchInput.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                filterUnits();
             }
-        });
-        
-        searchInput.addEventListener('input', function() {
-            // Filtra automaticamente ao digitar, mas com um pequeno delay para performance
-            clearTimeout(this.typingTimer);
-            this.typingTimer = setTimeout(filterUnits, 300);
             
-            if (this.value === '' && !this.originalContent) {
-                 renderUnits(units);
+            // Renderizar resultados
+            UI.renderContacts(filtered, 'all');
+            UI.setCounts(filtered.length, this.favorites.length);
+        },
+
+        async performSearch() {
+            const term = (UI.elements.searchInput.value || '').trim().toLowerCase();
+            const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+            await this.filterContacts(activeFilter);
+        },
+
+        async editUnit(id) {
+            if (!AuthService.isLogged()) {
+                UI.showLogin();
+                return;
             }
-        });
-        
-        // Event Listeners para o Modal
-        cancelButton.addEventListener('click', function() {
-            confirmationModal.style.display = 'none';
-        });
-        
-        confirmButton.addEventListener('click', function() {
-            if (selectedUnitUrl) {
-                // Abre em nova aba
-                window.open(selectedUnitUrl, '_blank');
-                confirmationModal.style.display = 'none';
+            
+            const unit = this.units.find(u => u.id === id);
+            if (!unit) return;
+            
+            // Preencher formulário com dados da unidade
+            document.getElementById('unitName').value = unit.name;
+            document.getElementById('unitType').value = unit.type;
+            document.getElementById('unitAddress').value = unit.address;
+            document.getElementById('unitBairro').value = unit.bairro;
+            document.getElementById('unitPhone').value = unit.phone;
+            document.getElementById('unitEmail').value = unit.email || '';
+            document.getElementById('unitEnfermeiro').value = unit.enfermeiro || '';
+            document.getElementById('unitGerente').value = unit.gerente || '';
+            document.getElementById('unitVacina').value = unit.vacina || 'Não';
+            document.getElementById('unitOdonto').value = unit.odonto || 'Não';
+            document.getElementById('unitFarmacia').value = unit.farmacia || 'Não';
+            document.getElementById('unitResponsavel').value = unit.responsavel || '';
+            
+            // Atualizar UI do formulário
+            UI.elements.formTitle.textContent = 'Editar Unidade';
+            UI.elements.submitBtn.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
+            UI.elements.cancelEditBtn.style.display = 'inline-flex';
+            UI.elements.formUnit.setAttribute('data-edit-id', id);
+            
+            // Atualizar lógica condicional
+            setTimeout(() => {
+                UI.setupConditionalFormLogic();
+            }, 100);
+            
+            // Navegar para a aba de adicionar/editar
+            UI.elements.adminTabs.forEach(t => t.classList.remove('active'));
+            document.querySelector('.admin-tab[data-tab="add"]').classList.add('active');
+            document.querySelectorAll('.admin-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('add-content').classList.add('active');
+            
+            UI.openAdmin();
+        },
+
+        async deleteUnit(id) {
+            if (!AuthService.isLogged()) {
+                UI.showLogin();
+                return;
             }
-        });
-        
-        // Fechar modal ao clicar fora dele
-        confirmationModal.addEventListener('click', function(e) {
-            if (e.target === confirmationModal) {
-                confirmationModal.style.display = 'none';
+            
+            if (!confirm('Tem certeza que deseja excluir esta unidade?')) return;
+            
+            try {
+                await DataService.deleteUnit(id);
+                
+                // Remover dos favoritos se estiver lá
+                this.favorites = this.favorites.filter(f => f !== id);
+                localStorage.setItem('telefonia_favorites', JSON.stringify(this.favorites));
+                
+                alert('Unidade excluída com sucesso!');
+            } catch (error) {
+                alert('Erro ao excluir unidade: ' + error.message);
             }
-        });
-        
-        // Fechar modal com ESC
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && confirmationModal.style.display === 'flex') {
-                confirmationModal.style.display = 'none';
+        },
+
+        async saveUnitFromForm() {
+            if (!AuthService.isLogged()) {
+                UI.showLogin();
+                return;
             }
-        });
-        
-        // Inicializar a página
-        updateCounters();
-        renderUnits(units);
+            
+            const editId = UI.elements.formUnit.getAttribute('data-edit-id');
+            
+            // Validar campo responsável se visível
+            const responsibleField = document.getElementById('unitResponsavel');
+            const isResponsibleVisible = !responsibleField.closest('.form-group').classList.contains('hidden');
+            
+            if (isResponsibleVisible && !responsibleField.value.trim()) {
+                alert('Por favor, preencha o campo Responsável!');
+                responsibleField.focus();
+                return;
+            }
+            
+            // Coletar dados do formulário
+            const unitData = {
+                name: document.getElementById('unitName').value,
+                type: document.getElementById('unitType').value,
+                address: document.getElementById('unitAddress').value,
+                bairro: document.getElementById('unitBairro').value,
+                phone: document.getElementById('unitPhone').value,
+                email: document.getElementById('unitEmail').value,
+                enfermeiro: document.getElementById('unitEnfermeiro').value,
+                gerente: document.getElementById('unitGerente').value,
+                vacina: document.getElementById('unitVacina').value,
+                odonto: document.getElementById('unitOdonto').value,
+                farmacia: document.getElementById('unitFarmacia').value,
+                responsavel: document.getElementById('unitResponsavel').value
+            };
+            
+            // Adicionar ID se for edição
+            if (editId) {
+                unitData.id = editId;
+            }
+            
+            try {
+                await DataService.saveUnit(unitData);
+                
+                // Resetar formulário
+                UI.elements.formUnit.reset();
+                UI.elements.formTitle.textContent = 'Adicionar Nova Unidade';
+                UI.elements.submitBtn.innerHTML = '<i class="fas fa-plus"></i> Adicionar Unidade';
+                UI.elements.cancelEditBtn.style.display = 'none';
+                UI.elements.formUnit.removeAttribute('data-edit-id');
+                
+                UI.setupConditionalFormLogic();
+                
+                alert(editId ? 'Unidade atualizada com sucesso!' : 'Unidade adicionada com sucesso!');
+            } catch (error) {
+                alert('Erro ao salvar unidade: ' + error.message);
+            }
+        },
+
+        backupData() {
+            const data = { units: this.units };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'backup-telefonia-' + new Date().toISOString().split('T')[0] + '.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(a.href);
+            
+            alert('Backup realizado com sucesso!');
+        },
+
+        restoreData(file) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (data.units) {
+                        if (confirm('Isso substituirá todos os dados atuais. Continuar?')) {
+                            // Para cada unidade no backup, salvar no Firebase
+                            for (const unit of data.units) {
+                                await DataService.saveUnit(unit);
+                            }
+                            
+                            alert('Dados restaurados com sucesso!');
+                        }
+                    } else {
+                        alert('Arquivo de backup inválido!');
+                    }
+                } catch (err) {
+                    alert('Erro ao ler arquivo: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            UI.elements.restoreInput.value = '';
+        },
+
+        clearAllData() {
+            if (!confirm('Isso apagará TODOS os dados. Esta ação não pode ser desfeita. Continuar?')) return;
+            
+            // Limpar dados locais
+            localStorage.removeItem('telefonia_favorites');
+            localStorage.removeItem('telefonia_isLogged');
+            this.favorites = [];
+            
+            // Limpar dados do Firebase (precisa ser feito manualmente para cada documento)
+            if (confirm('AVISO: Para limpar completamente os dados do Firebase, você precisa fazer isso manualmente no console do Firebase. Deseja apenas limpar os dados locais?')) {
+                this.refreshUI();
+                alert('Dados locais limpos! Os dados do Firebase permanecem intactos.');
+            }
+        }
+    };
+
+    // Inicializar aplicação quando o DOM estiver carregado
+    document.addEventListener('DOMContentLoaded', () => App.init());
+
+    // Tornar objetos globais para debugging
+    window.App = App;
+    window.UI = UI;
+    window.DataService = DataService;
+    window.AuthService = AuthService;
     </script>
 </body>
 </html>
